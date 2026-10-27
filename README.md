@@ -92,6 +92,15 @@ macOS `.pkg` and `.zip` and the Windows `Setup.exe` and `.zip` attached.
   offline render host, a CPU benchmark and a smoke test for built plugins.
 - `legacy/`: an earlier prototype, kept for reference and not built.
 
+## Licence
+
+Copyright © 2026 Sam Hindmarch. Septima and Vista Rooms are free software,
+released under the **GNU Affero General Public License v3.0 or later** (see
+[LICENSE](LICENSE)). You can use the plugins in any music, commercial or not;
+the licence only governs the code. If you distribute modified versions, you
+must release their source under the same licence. JUCE is used under its
+AGPLv3 open-source licence.
+
 ## Credits and notices
 
 - Built with [JUCE](https://juce.com).
