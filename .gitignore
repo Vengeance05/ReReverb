@@ -1,0 +1,27 @@
+# Build output
+build/
+build-*/
+tools/*/build/
+dependencies/
+dist/
+*.pkg
+.DS_Store
+*.log
+
+# Audio, impulse responses and third-party preset data: never commit
+*.wav
+*.WAV
+*.aif
+*.aiff
+*.flac
+*.7thpro
+presets.json
+SH_kit/
+AB_kit/
+test_presets/
+preset_name_map.csv
+src.tgz
+Claude outputs/
+
+# Local-only preset conversion tools (depend on data that can't be shared)
+tools/preset_gen/

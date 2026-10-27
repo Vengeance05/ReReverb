@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.22)
+project(PluginBench)
+set(CMAKE_CXX_STANDARD 20)
+add_subdirectory(${JUCE_DIR} JUCE)
+juce_add_console_app(PluginBench PRODUCT_NAME "PluginBench")
+target_sources(PluginBench PRIVATE main.cpp)
+target_compile_definitions(PluginBench PRIVATE JUCE_PLUGINHOST_VST3=1 JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+target_link_libraries(PluginBench PRIVATE juce::juce_audio_processors juce::juce_audio_utils juce::juce_recommended_config_flags)

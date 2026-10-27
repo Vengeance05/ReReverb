@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.22)
+project(PluginRender VERSION 1.0.0)
+set(CMAKE_CXX_STANDARD 20)
+add_subdirectory(${JUCE_DIR} JUCE)
+juce_add_console_app(PluginRender PRODUCT_NAME "PluginRender")
+target_sources(PluginRender PRIVATE main.cpp)
+target_compile_definitions(PluginRender PRIVATE JUCE_PLUGINHOST_VST3=1 JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+target_link_libraries(PluginRender PRIVATE juce::juce_audio_processors juce::juce_audio_utils juce::juce_recommended_config_flags)
