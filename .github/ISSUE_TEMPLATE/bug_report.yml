@@ -1,0 +1,62 @@
+name: Bug report
+description: Something crashed, didn't load, or sounds wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to report this. The details below make it much quicker to fix.
+  - type: dropdown
+    id: plugin
+    attributes:
+      label: Plugin
+      options: [Septima, Vista Rooms, Both]
+    validations: {required: true}
+  - type: input
+    id: version
+    attributes:
+      label: Plugin version
+      description: Shown on the release you downloaded, e.g. 1.0.1
+      placeholder: "1.0.1"
+    validations: {required: true}
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [macOS (Apple Silicon), macOS (Intel), Windows 10, Windows 11, Other]
+    validations: {required: true}
+  - type: input
+    id: os_version
+    attributes:
+      label: OS version
+      placeholder: e.g. macOS 15.1 / Windows 11 24H2
+  - type: input
+    id: daw
+    attributes:
+      label: DAW and version
+      placeholder: e.g. Logic Pro 11.1, Ableton Live 12.1, FL Studio 24, Reaper 7
+    validations: {required: true}
+  - type: dropdown
+    id: format
+    attributes:
+      label: Plugin format
+      options: [AU, VST3, Don't know]
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you expected, and what happened instead.
+    validations: {required: true}
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Preset name, settings, sample rate / buffer size if relevant.
+      placeholder: |
+        1. Insert Vista Rooms on a bus
+        2. Load preset ...
+        3. ...
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Crash logs, screenshots, or a short audio example help a lot. Drag files in here.

@@ -54,7 +54,7 @@ private:
     Dynamics dynamics_;
     std::vector<float> dryL_, dryR_, erL_, erR_, lateL_, lateR_, duckWet_, compWeight_;
     Smoother erGain_, lateGain_, dryGain_, wetGain_, outGain_;
-    Smoother duckRevW_, duckWetW_, compW_;   // where the dynamics apply (crossfaded on mode change)
+    Fader duckRevW_, duckWetW_, compW_;   // where the dynamics apply (crossfaded on mode change)
     float meterIn_ = 0, meterRefl_ = 0, meterReverb_ = 0, meterOut_ = 0;
     // Idle skipping: silent input and a fully decayed wet signal (not frozen).
     int quietSamples_ = 0;

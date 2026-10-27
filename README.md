@@ -83,6 +83,17 @@ platforms on every push and pull request. To publish a release:
 The workflow builds everything and creates the GitHub Release with the
 macOS `.pkg` and `.zip` and the Windows `Setup.exe` and `.zip` attached.
 
+### Compatibility rules (keep old sessions sounding the same)
+- Never remove or rename a parameter ID, and only add choice-list entries at
+  the end. `tools/check_params.py` enforces this (run with `--update` after
+  adding parameters).
+- Changes must not alter how existing settings sound.
+  `VistaRooms_Golden check tests/golden/vista_rooms.txt` and
+  `rr_golden_core check tests/golden/septima_core.txt` compare renders against
+  1.0.0. If a change to the sound is intended, bump `kEngineVersion` in the
+  processor, keep the old behaviour for sessions with a lower
+  `engineVersion()`, and only then regenerate the golden files with `update`.
+
 ### Repository layout
 - `core/`: DSP that doesn't depend on JUCE (reverb engines, IR reshaping, IR
   library scanning). Tests are in `tests/rr_tests.cpp`.
@@ -90,6 +101,9 @@ macOS `.pkg` and `.zip` and the Windows `Setup.exe` and `.zip` attached.
 - `installer/windows`: the Inno Setup script.
 - `tools/plugin_render`, `tools/plugin_bench`, `tools/plugin_smoke`: an
   offline render host, a CPU benchmark and a smoke test for built plugins.
+- `tools/golden_render`, `tests/golden_core.cpp`, `tests/golden/`: the
+  session-compatibility checks. `tools/editor_snapshot` saves PNGs of the
+  editors (`-DRR_BUILD_SNAPSHOT=ON`).
 - `legacy/`: an earlier prototype, kept for reference and not built.
 
 ## Licence

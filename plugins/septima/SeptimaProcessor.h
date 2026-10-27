@@ -42,11 +42,22 @@ public:
     void setStateInformation(const void*, int) override;
 
     juce::AudioProcessorValueTreeState& state() noexcept { return state_; }
+
+    // Sound-compatibility version saved with every session. Bump kEngineVersion
+    // only for a change that alters how existing settings sound, and keep the old
+    // behaviour available for sessions that load with a lower engineVersion():
+    // a project made with an older release must keep sounding the same.
+    static constexpr int kEngineVersion = 1;
+    int engineVersion() const noexcept { return engineVersion_.load(); }
     rrui::PresetManager& presets() noexcept { return *presets_; }
 
     // ---- Library / program API (message thread) ----
     void setLibraryFolder(const juce::File& folder);
     juce::File libraryFolder() const;
+    // Rescans the chosen folder, or the default IR folders if none is chosen.
+    void rescanLibrary();
+    // Per-user default IR folder (created on request); searched automatically.
+    static juce::File userDefaultLibraryFolder(bool create = false);
     std::vector<rr::IrProgram> programs() const;
     juce::String currentProgramKey() const;
     void selectProgram(const juce::String& key, bool applySampledDecay);
@@ -69,6 +80,7 @@ public:
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
 
 private:
+    std::atomic<int> engineVersion_{kEngineVersion};
     struct IrPackage {
         juce::AudioBuffer<float> earlyA, earlyB, lateA, lateB, vlfA, vlfB;   // late/VLF: first 2P samples only
         std::unique_ptr<septima::TailSpectra> tailA, tailB;                   // the rest, for the two tail stages

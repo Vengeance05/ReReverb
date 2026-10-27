@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Rereverb VERSION 1.0.0 LANGUAGES C CXX)
+project(Rereverb VERSION 1.0.1 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -35,6 +35,9 @@ enable_testing()
 add_executable(rr_tests tests/rr_tests.cpp)
 target_link_libraries(rr_tests PRIVATE rr_core)
 add_test(NAME rr_tests COMMAND rr_tests)
+
+add_executable(rr_golden_core tests/golden_core.cpp)
+target_link_libraries(rr_golden_core PRIVATE rr_core)
 
 add_executable(rr_render tools/render.cpp)
 target_link_libraries(rr_render PRIVATE rr_core)
@@ -86,13 +89,14 @@ if (RR_BUILD_PLUGINS)
             rr_core rr_plugin_common rr_fonts
             juce::juce_audio_utils juce::juce_dsp
             juce::juce_recommended_config_flags
-            juce::juce_recommended_lto_flags
+            $<$<BOOL:${RR_LTO}>:juce::juce_recommended_lto_flags>
             juce::juce_recommended_warning_flags)
         target_compile_definitions(${target} PRIVATE
             JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0
             JUCE_DISPLAY_SPLASH_SCREEN=0)
     endfunction()
 
+    option(RR_LTO "Link-time optimisation for the plugins (slow to link; release builds)" ON)
     option(RR_COPY_AFTER_BUILD "Install plugins into the user plugin folders after building" ON)
 
     rr_add_plugin(Septima "Septima" Sptm)
@@ -104,4 +108,22 @@ if (RR_BUILD_PLUGINS)
     target_sources(VistaRooms PRIVATE
         plugins/vista_rooms/VistaProcessor.cpp
         plugins/vista_rooms/VistaEditor.cpp)
+
+    # Session-compatibility guard: renders presets in-process and compares them
+    # with tests/golden/*.txt (see tools/golden_render/main.cpp).
+    add_executable(VistaRooms_Golden tools/golden_render/main.cpp)
+    target_link_libraries(VistaRooms_Golden PRIVATE VistaRooms $<$<BOOL:${RR_LTO}>:juce::juce_recommended_lto_flags>)
+    target_include_directories(VistaRooms_Golden PRIVATE ${JUCE_DIR}/modules)
+    target_compile_definitions(VistaRooms_Golden PRIVATE JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1 JUCE_STANDALONE_APPLICATION=1)
+
+    # Development only: render each editor to a PNG (tools/editor_snapshot).
+    option(RR_BUILD_SNAPSHOT "Build editor screenshot tools" OFF)
+    if (RR_BUILD_SNAPSHOT)
+        foreach(t Septima VistaRooms)
+            add_executable(${t}_Snapshot tools/editor_snapshot/main.cpp)
+            target_link_libraries(${t}_Snapshot PRIVATE ${t} $<$<BOOL:${RR_LTO}>:juce::juce_recommended_lto_flags>)
+            target_include_directories(${t}_Snapshot PRIVATE ${JUCE_DIR}/modules)
+            target_compile_definitions(${t}_Snapshot PRIVATE JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1 JUCE_STANDALONE_APPLICATION=1)
+        endforeach()
+    endif()
 endif()

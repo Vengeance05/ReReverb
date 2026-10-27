@@ -1,0 +1,172 @@
+{
+ "septima": {
+  "ids": [
+   "decay",
+   "predelay",
+   "predelay_sync",
+   "delay_time",
+   "delay_sync",
+   "delay_level",
+   "er_set",
+   "early_late",
+   "vlf",
+   "early_rolloff",
+   "late_rolloff",
+   "low_mult",
+   "low_xover",
+   "high_mult",
+   "high_xover",
+   "modulation",
+   "motion",
+   "eq_on",
+   "eq_low_type",
+   "eq_low_freq",
+   "eq_low_gain",
+   "eq_low_q",
+   "eq_mid_freq",
+   "eq_mid_gain",
+   "eq_mid_q",
+   "eq_high_type",
+   "eq_high_freq",
+   "eq_high_gain",
+   "eq_high_q",
+   "eq_highcut",
+   "mix",
+   "gain"
+  ],
+  "choices": {
+   "kEqLowHighTypes": [
+    "Shelf",
+    "Bell"
+   ]
+  }
+ },
+ "vista_rooms": {
+  "ids": [
+   "refl_proximity",
+   "refl_reflectivity",
+   "refl_size",
+   "refl_pattern",
+   "refl_diffusion",
+   "refl_rolloff",
+   "refl_slope",
+   "refl_mod",
+   "refl_chorus",
+   "refl_xfeed",
+   "refl_xfeed_delay",
+   "refl_xfeed_rolloff",
+   "rev_time",
+   "rev_infinite",
+   "rev_bass_mult",
+   "rev_bass_freq",
+   "rev_treble_mult",
+   "rev_treble_freq",
+   "rev_lowboost",
+   "rev_predelay",
+   "rev_predelay_sync",
+   "rev_bloom",
+   "rev_undulation",
+   "rev_size",
+   "rev_rolloff",
+   "rev_slope",
+   "rev_mod",
+   "rev_chorus",
+   "rev_xfeed",
+   "rev_xfeed_delay",
+   "rev_xfeed_rolloff",
+   "rev_echo_time",
+   "rev_echo_sync",
+   "rev_echo_level",
+   "rev_echo_rolloff",
+   "width",
+   "balance",
+   "mix",
+   "gain",
+   "eq_on",
+   "eq_lowcut",
+   "eq_ls_freq",
+   "eq_ls_gain",
+   "eq_ls_q",
+   "eq_mid_freq",
+   "eq_mid_gain",
+   "eq_mid_q",
+   "eq_hs_freq",
+   "eq_hs_gain",
+   "eq_hs_q",
+   "eq_rolloff",
+   "dyn_mode",
+   "dyn_threshold",
+   "dyn_ratio",
+   "dyn_knee",
+   "dyn_attack",
+   "dyn_release",
+   "dyn_trim",
+   "gate_on",
+   "gate_threshold",
+   "gate_hold",
+   "gate_range",
+   "gate_close",
+   "gate_open",
+   "gate_hysteresis"
+  ],
+  "choices": {
+   "kPatterns": [
+    "Room",
+    "Studio",
+    "Chamber",
+    "Hall",
+    "Stage",
+    "Cathedral",
+    "Scattered",
+    "Nonlin U"
+   ],
+   "kSlopes": [
+    "6 dB/oct",
+    "12 dB/oct",
+    "18 dB/oct",
+    "24 dB/oct"
+   ],
+   "kReflChorus": [
+    "Off",
+    "Fine",
+    "Light",
+    "Moderate"
+   ],
+   "kRevChorus": [
+    "Light",
+    "Moderate",
+    "Ease-in"
+   ],
+   "kDynModes": [
+    "Off",
+    "Duck Reverb",
+    "Duck Wet",
+    "Compress Wet"
+   ]
+  }
+ },
+ "common": {
+  "ids": [],
+  "choices": {
+   "c": [
+    "Free",
+    "1/64",
+    "1/32T",
+    "1/32",
+    "1/16T",
+    "1/32D",
+    "1/16",
+    "1/8T",
+    "1/16D",
+    "1/8",
+    "1/4T",
+    "1/8D",
+    "1/4",
+    "1/2T",
+    "1/4D",
+    "1/2",
+    "1/1"
+   ]
+  }
+ }
+}

@@ -243,11 +243,32 @@ juce::File SeptimaProcessor::globalSettingsFile() {
 }
 
 juce::File SeptimaProcessor::bundledLibraryFolder() {
+    // Prefer a default folder that actually holds IRs; else the first that exists.
+    juce::File firstExisting;
     for (auto where : {juce::File::userApplicationDataDirectory, juce::File::commonApplicationDataDirectory}) {
         auto f = appSupport(where).getChildFile("Septima/IRs");
-        if (f.isDirectory()) return f;
+        if (!f.isDirectory()) continue;
+        if (firstExisting == juce::File()) firstExisting = f;
+        if (!f.findChildFiles(juce::File::findFiles, true, "*.wav;*.WAV;*.aif;*.aiff", juce::File::FollowSymlinks::no).isEmpty())
+            return f;
     }
-    return {};
+    return firstExisting;
+}
+
+juce::File SeptimaProcessor::userDefaultLibraryFolder(bool create) {
+    auto f = appSupport(juce::File::userApplicationDataDirectory).getChildFile("Septima/IRs");
+    if (create) f.createDirectory();
+    return f;
+}
+
+void SeptimaProcessor::rescanLibrary() {
+    {
+        std::lock_guard lock(mutex_);
+        if (!libraryFolder_.isDirectory()) libraryFolder_ = bundledLibraryFolder();
+        if (!libraryFolder_.isDirectory()) return;
+        rescanRequested_ = true;
+    }
+    notify();
 }
 
 void SeptimaProcessor::saveGlobalLibrary(const juce::File& folder) {
@@ -814,6 +835,7 @@ void SeptimaProcessor::getStateInformation(juce::MemoryBlock& dest) {
     st.setProperty("libraryFolder", libraryFolder().getFullPathName(), nullptr);
     st.setProperty("programKey", currentProgramKey(), nullptr);
     st.setProperty("presetName", presets_->currentName(), nullptr);
+    st.setProperty("engineVersion", engineVersion_.load(), nullptr);
     if (auto xml = st.createXml()) copyXmlToBinary(*xml, dest);
 }
 
@@ -824,6 +846,8 @@ void SeptimaProcessor::setStateInformation(const void* data, int size) {
     const juce::File folder(tree.getProperty("libraryFolder").toString());
     const juce::String key = tree.getProperty("programKey").toString();
     presets_->setCurrentName(tree.getProperty("presetName", "Default").toString());
+    // Sessions from 1.0.0 carry no version: they are engine version 1.
+    engineVersion_ = juce::jlimit(1, kEngineVersion, static_cast<int>(tree.getProperty("engineVersion", 1)));
     state_.replaceState(tree);
     rrui::syncParametersToState(state_);
     {

@@ -1,0 +1,16 @@
+name: Idea or request
+description: Suggest a feature, preset, or improvement
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: plugin
+    attributes:
+      label: Plugin
+      options: [Septima, Vista Rooms, Both, Installer / docs]
+    validations: {required: true}
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+      description: And what would you use it for?
+    validations: {required: true}

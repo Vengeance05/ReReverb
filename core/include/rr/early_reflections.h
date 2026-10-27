@@ -74,6 +74,9 @@ private:
     void generatePhysical(const ErSettings& s, TapSet& out) const noexcept;
     void generateProcedural(const ErSettings& s, TapSet& out) const noexcept;
     void applyDerived(const ErSettings& s) noexcept;
+    void setAbsorb(float logHz) noexcept;
+    float absorbCurLog_ = 0.0f, absorbTargetLog_ = 0.0f;
+    bool absorbPrimed_ = false;
     float renderSet(const TapSet& set, int output, bool cross, int order) const noexcept;
 
     double fs_ = 48000.0;

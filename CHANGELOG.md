@@ -8,7 +8,33 @@ This project uses [semantic versioning](https://semver.org): MAJOR.MINOR.PATCH.
 - **Major (x.0.0):** may change how existing sessions sound. Release notes
   will say so.
 
-## [1.0.0] - unreleased
+## [1.0.1] - 2026-10-27
+
+### Septima
+- New first-run screen: until it finds the impulse responses, Septima shows
+  setup steps with **Download IR library**, **Choose folder**, **Open default
+  folder** and **Rescan** buttons, and says which folder it looked in.
+- The default IR folder is preferred when it actually contains IRs.
+
+### Vista Rooms
+- Removed faint ticks when switching Dynamics Mode, the EQ low cut on or off,
+  the roll-off slopes and the reflection pattern while audio is playing.
+  Switches now crossfade with smooth S-curves, and quick back-and-forth
+  changes no longer cut a fade short.
+
+### Both
+- Sessions now record an engine version, so future sound changes can keep
+  old projects sounding as they were made.
+- No change to how existing presets and sessions sound. This is checked
+  automatically against renders of 1.0.0.
+
+### Behind the scenes
+- Every build now runs pluginval (strictness 10) on both platforms, auval
+  on the Mac AUs, a parameter-compatibility check and golden-render checks.
+- Bug report and feature request forms on GitHub Issues.
+- Faster test builds. Releases are still universal and fully optimised.
+
+## [1.0.0] - 2026-10-27
 
 First public release.
 

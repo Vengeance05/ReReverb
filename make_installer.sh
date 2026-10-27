@@ -13,7 +13,7 @@
 #
 # Never publish a package built with --with-irs: the IR library's licence does
 # not allow redistributing its impulse responses.
-set -e
+set -eo pipefail
 cd "$(dirname "$0")"
 VERSION=$(sed -n 's/^project(Rereverb VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
 IR_SRC=""
@@ -26,7 +26,7 @@ command -v cmake >/dev/null || { echo "Install CMake first: brew install cmake";
 [ -f dependencies/JUCE/CMakeLists.txt ] || git clone --depth 1 --branch 8.0.4 https://github.com/juce-framework/JUCE.git dependencies/JUCE
 
 ARCHS="${ARCHS:-arm64;x86_64}"   # universal by default so the package runs on any Mac
-cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DRR_COPY_AFTER_BUILD=OFF -DCMAKE_OSX_ARCHITECTURES="$ARCHS"
+cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DRR_COPY_AFTER_BUILD=OFF -DRR_LTO="${RR_LTO:-ON}" -DCMAKE_OSX_ARCHITECTURES="$ARCHS"
 cmake --build build-release --config Release --parallel
 ./build-release/rr_tests | grep -E "FAIL|checks"
 

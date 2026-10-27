@@ -34,6 +34,13 @@ public:
     void setStateInformation(const void*, int) override;
 
     juce::AudioProcessorValueTreeState& state() noexcept { return state_; }
+
+    // Sound-compatibility version saved with every session. Bump kEngineVersion
+    // only for a change that alters how existing settings sound, and keep the old
+    // behaviour available for sessions that load with a lower engineVersion():
+    // a project made with an older release must keep sounding the same.
+    static constexpr int kEngineVersion = 1;
+    int engineVersion() const noexcept { return engineVersion_.load(); }
     rrui::PresetManager& presets() noexcept { return *presets_; }
 
     struct Meters { std::atomic<float> in{0}, refl{0}, reverb{0}, out{0}, duck{0}; };
@@ -42,6 +49,7 @@ public:
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
 
 private:
+    std::atomic<int> engineVersion_{kEngineVersion};
     void parameterChanged(const juce::String&, float) override { dirty_ = true; }
     rr::VistaSettings buildSettings(double bpm) const;
     float p(const char* id) const;

@@ -255,6 +255,7 @@ juce::AudioProcessorEditor* VistaProcessor::createEditor() { return new VistaEdi
 void VistaProcessor::getStateInformation(juce::MemoryBlock& dest) {
     auto st = state_.copyState();
     st.setProperty("presetName", presets_->currentName(), nullptr);
+    st.setProperty("engineVersion", engineVersion_.load(), nullptr);
     if (auto xml = st.createXml()) copyXmlToBinary(*xml, dest);
 }
 
@@ -263,6 +264,8 @@ void VistaProcessor::setStateInformation(const void* data, int size) {
         if (xml->hasTagName(state_.state.getType())) {
             auto tree = juce::ValueTree::fromXml(*xml);
             presets_->setCurrentName(tree.getProperty("presetName", "Default").toString());
+            // Sessions from 1.0.0 carry no version: they are engine version 1.
+            engineVersion_ = juce::jlimit(1, kEngineVersion, static_cast<int>(tree.getProperty("engineVersion", 1)));
             state_.replaceState(tree);
             rrui::syncParametersToState(state_);
             dirty_ = true;

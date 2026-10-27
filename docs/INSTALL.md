@@ -75,8 +75,9 @@ download it yourself, once.
      - Windows: `C:\ProgramData\Rereverb\Septima\IRs\` (created by the
        installer) or `%APPDATA%\Rereverb\Septima\IRs\`
 
-Until it finds the IRs, Septima shows *"No IRs found: click IR Library… and
-choose your IR folder"*. If you move the folder later, choose it again with
+Until it finds the IRs, Septima shows a setup screen with these steps and
+buttons to **Download IR library**, **Choose folder**, **Open default folder**
+and **Rescan**. If you move the folder later, choose it again with
 **IR Library…**. Your sessions and presets still load, because programs are
 matched by name rather than by file path.
 

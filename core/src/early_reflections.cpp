@@ -101,7 +101,9 @@ void EarlyReflections::prepare(double sampleRate, int /*maxBlockSize*/) {
     sets_[1] = sets_[0];
     active_ = 0;
     fadeRemaining_ = 0;
+    absorbPrimed_ = false;
     applyDerived(settings_);
+    absorbPrimed_ = true;
     smoothCoef_ = static_cast<float>(std::exp(-1.0 / (0.025 * fs_)));
     snapSmoothed();
     reset();
@@ -123,6 +125,7 @@ void EarlyReflections::reset() noexcept {
     }
     fadeRemaining_ = 0;
     snapSmoothed();
+    if (absorbPrimed_) setAbsorb(absorbTargetLog_);
 }
 
 double EarlyReflections::longestTapSeconds() const noexcept {
@@ -162,6 +165,12 @@ void EarlyReflections::setSettings(const ErSettings& s) noexcept {
     applyDerived(s);
 }
 
+void EarlyReflections::setAbsorb(float logHz) noexcept {
+    absorbCurLog_ = logHz;
+    const double hz = std::exp(static_cast<double>(logHz));
+    for (auto& o : absorb_) for (auto& k : o) for (auto& f : k) f.setCutoff(fs_, hz);
+}
+
 void EarlyReflections::applyDerived(const ErSettings& s) noexcept {
     const auto& shape = kShapes[static_cast<int>(s.pattern)];
     // Only a mild high-frequency loss per reflection order: measured reference
@@ -169,7 +178,10 @@ void EarlyReflections::applyDerived(const ErSettings& s) noexcept {
     // roll-off sets the tone; reflectivity shapes the envelope and level).
     const double absorbHz = (13000.0 + 9000.0 * static_cast<double>(s.reflectivity))
                           * std::sqrt(static_cast<double>(shape.hardness));
-    for (auto& o : absorb_) for (auto& k : o) for (auto& f : k) f.setCutoff(fs_, absorbHz);
+    // The absorption cutoff glides (per control block) so pattern/reflectivity
+    // changes don't step the filter coefficients mid-signal.
+    absorbTargetLog_ = static_cast<float>(std::log(absorbHz));
+    if (!absorbPrimed_) setAbsorb(absorbTargetLog_);
     for (auto& f : crossRolloff_) f.setup(fs_, s.crossfeedRolloffHz, 12);
     for (auto& f : rolloff_) { f.setShape(RollOff::Shape::Cascade); f.setup(fs_, s.rolloffHz, s.rolloffSlope); }
 
@@ -425,6 +437,10 @@ void EarlyReflections::process(const float* inL, const float* inR, float* outL, 
         }
         if (--controlCountdown_ <= 0) {
             controlCountdown_ = 32;
+            if (absorbCurLog_ != absorbTargetLog_) {
+                const float g = absorbCurLog_ + (absorbTargetLog_ - absorbCurLog_) * 0.25f;
+                setAbsorb(std::abs(g - absorbTargetLog_) < 1.0e-4f ? absorbTargetLog_ : g);
+            }
             // Snap values that have (practically) arrived; settle when all have.
             bool settled = true, scatterOk = true;
             auto snap = [&settled](float& c, float t, float eps) { if (std::abs(c - t) < eps) c = t; else settled = false; };
@@ -449,7 +465,7 @@ void EarlyReflections::process(const float* inL, const float* inR, float* outL, 
         // bus[output][own/cross][order]
         float bus[2][2][3] = {};
         const float newWeight = fadeRemaining_ > 0
-            ? 1.0f - static_cast<float>(fadeRemaining_) / static_cast<float>(fadeLength_) : 1.0f;
+            ? sCurve(1.0f - static_cast<float>(fadeRemaining_) / static_cast<float>(fadeLength_)) : 1.0f;
         auto accumulate = [&](const TapSet& set, float weight) {
             for (int o = 0; o < 2; ++o) {
                 for (int kind = 0; kind < 2; ++kind) {

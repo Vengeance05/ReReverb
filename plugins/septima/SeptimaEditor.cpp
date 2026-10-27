@@ -275,11 +275,66 @@ void ProgramBrowser::mouseUp(const juce::MouseEvent& e) {
 }
 
 // ============================================================================
+SetupPanel::SetupPanel(juce::Colour accent) : accent_(accent) {
+    for (auto* b : {&download, &choose, &openDefault, &rescan}) addAndMakeVisible(*b);
+    download.setTooltip(downloadUrl());
+    download.getProperties().set("primary", true);
+    download.setColour(juce::TextButton::textColourOffId, accent_);
+    choose.setTooltip("Pick the unzipped download folder (or any folder of WAV/AIFF impulse responses)");
+    openDefault.setTooltip("Open the folder Septima checks automatically, to copy your IRs into");
+    rescan.setTooltip("Look for IRs again, e.g. after copying them into the default folder");
+}
+
+void SetupPanel::resized() {
+    const int y = 286, h = 32;
+    download.setBounds(40, y, 210, h);
+    choose.setBounds(262, y, 170, h);
+    openDefault.setBounds(444, y, 190, h);
+    rescan.setBounds(646, y, 100, h);
+}
+
+void SetupPanel::paint(juce::Graphics& g) {
+    auto r = getLocalBounds().toFloat();
+    g.setColour(Colours::background.withAlpha(0.97f));
+    g.fillRoundedRectangle(r, 6.0f);
+    rrui::paintDisplayGlass(g, r.reduced(1.0f), accent_);
+
+    g.setColour(accent_);
+    g.setFont(rrui::capsFont(11.0f).withExtraKerningFactor(0.2f));
+    g.drawText("FIRST-TIME SETUP", 40, 36, 600, 16, juce::Justification::left, false);
+    g.setColour(Colours::text);
+    g.setFont(rrui::uiFont(26.0f, rrui::Weight::Medium));
+    g.drawText("Septima needs its impulse responses", 40, 56, 860, 36, juce::Justification::left, false);
+
+    g.setFont(rrui::uiFont(14.0f));
+    const char* steps[] = {
+        "1.   Download the free IR library (about 960 MB): \"Samplicity - Bricasti IRs version 2023-10.zip\".",
+        "2.   Unzip it anywhere you like.",
+        "3.   Click Choose Folder and pick the unzipped folder. The top-level folder is fine.",
+        "       Or copy the WAVs into the default folder and click Rescan.",
+    };
+    int y = 112;
+    for (auto* line : steps) {
+        g.setColour(line[0] == ' ' ? Colours::textDim : Colours::textMid);
+        g.drawText(line, 40, y, 900, 22, juce::Justification::left, false);
+        y += 30;
+    }
+    g.setColour(Colours::textDim);
+    g.setFont(rrui::uiFont(12.0f));
+    g.drawText("The library can't be bundled with Septima because of its licence. You only need to do this once.",
+               40, 336, 900, 18, juce::Justification::left, false);
+    if (message_.isNotEmpty()) {
+        g.setColour(accent_.withAlpha(0.9f));
+        g.drawText(message_, 40, 362, 900, 18, juce::Justification::left, true);
+    }
+}
+
+// ============================================================================
 SeptimaEditor::SeptimaEditor(SeptimaProcessor& p)
     : AudioProcessorEditor(p), proc_(p), lnf_(kAccent),
       mainPanel_("Reverb", kAccent), outPanel_("Output", kAccent), earlyPanel_("Early", kAccent),
       latePanel_("Late", kAccent), shapePanel_("Decay Shape", kAccent), eqPanel_("Master EQ", kAccent),
-      presetBar_(p.presets(), kAccent), display_(p, kAccent), browser_(p, kAccent),
+      presetBar_(p.presets(), kAccent), display_(p, kAccent), browser_(p, kAccent), setup_(kAccent),
       meters_({"IN", "ER", "LATE", "VLF", "OUT"}, kAccent),
       eqCurve_(kAccent,
                [this] {
@@ -360,6 +415,15 @@ SeptimaEditor::SeptimaEditor(SeptimaProcessor& p)
     browser_.onClose = [this] { browser_.setVisible(false); };
     addChildComponent(browser_);
 
+    setup_.download.onClick = [] { juce::URL(SetupPanel::downloadUrl()).launchInDefaultBrowser(); };
+    setup_.choose.onClick = [this] { chooseLibrary(); };
+    setup_.openDefault.onClick = [] {
+        const auto f = SeptimaProcessor::userDefaultLibraryFolder(true);
+        f.startAsProcess(); // opens the folder in Finder / Explorer
+    };
+    setup_.rescan.onClick = [this] { proc_.rescanLibrary(); };
+    addChildComponent(setup_);
+
     setSize(kWidth, kHeight);
     startTimerHz(30);
 }
@@ -421,6 +485,7 @@ void SeptimaEditor::resized() {
     libraryButton_.setBounds(kWidth - 16 - 104, 14, 104, 28);
     display_.setBounds(16, 64, 968, 150);
     browser_.setBounds(16, 64, 968, 492);
+    setup_.setBounds(16, 64, 968, 492);
 
     using rrui::Knob;
     const int lw = Knob::cellWidth(KnobSize::Large), lh = Knob::cellHeight(KnobSize::Large);
@@ -484,6 +549,16 @@ void SeptimaEditor::timerCallback() {
         if (browser_.isVisible()) browser_.setPrograms(proc_.programs(), proc_.currentProgramKey());
     }
     display_.refresh(st);
+    // Setup screen until a library with programs has been found.
+    const bool noLibrary = !st.busy && !st.ready && proc_.programs().empty();
+    if (noLibrary != setup_.isVisible()) {
+        setup_.setVisible(noLibrary);
+        if (noLibrary) setup_.toFront(false);
+    }
+    if (noLibrary) {
+        const auto folder = proc_.libraryFolder();
+        setup_.setMessage(folder.isDirectory() ? "No impulse responses found in " + folder.getFullPathName() : juce::String());
+    }
     auto take = [](std::atomic<float>& a) { return a.exchange(0.0f); };
     meters_.setLevels({take(proc_.meters.in), take(proc_.meters.early), take(proc_.meters.late),
                        take(proc_.meters.vlf), take(proc_.meters.out)});

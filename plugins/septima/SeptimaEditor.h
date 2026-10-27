@@ -44,6 +44,21 @@ private:
     int hover_ = -1;
 };
 
+// Shown instead of the controls until an IR library has been found.
+class SetupPanel : public juce::Component {
+public:
+    explicit SetupPanel(juce::Colour accent);
+    void paint(juce::Graphics&) override;
+    void resized() override;
+    void setMessage(const juce::String& m) { if (m != message_) { message_ = m; repaint(); } }
+    juce::TextButton download{"DOWNLOAD IR LIBRARY"}, choose{"CHOOSE FOLDER..."}, openDefault{"OPEN DEFAULT FOLDER"},
+                     rescan{"RESCAN"};
+    static const char* downloadUrl() { return "https://samplicity.com/downloads/"; }
+private:
+    juce::Colour accent_;
+    juce::String message_;
+};
+
 class SeptimaEditor : public juce::AudioProcessorEditor, private juce::Timer {
 public:
     explicit SeptimaEditor(SeptimaProcessor&);
@@ -67,6 +82,7 @@ private:
     rrui::PresetBar presetBar_;
     SeptimaDisplay display_;
     ProgramBrowser browser_;
+    SetupPanel setup_;
     rrui::MeterBank meters_;
     rrui::ResponseCurve eqCurve_;
     juce::TextButton libraryButton_{"IR LIBRARY"}, sampledButton_{"SAMPLED"};

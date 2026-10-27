@@ -133,7 +133,12 @@ void LookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& b, const
     if (down) fill = fill.darker(0.15f);
     g.setColour(fill);
     g.fillRoundedRectangle(r, 4.0f);
-    g.setColour(on ? accent_.withAlpha(0.7f) : Colours::outline);
+    const bool primary = static_cast<bool>(b.getProperties()["primary"]);
+    if (primary) {
+        g.setColour(accent_.withAlpha(over ? 0.22f : 0.14f));
+        g.fillRoundedRectangle(r, 4.0f);
+    }
+    g.setColour(on || primary ? accent_.withAlpha(0.7f) : Colours::outline);
     g.drawRoundedRectangle(r, 4.0f, 1.0f);
     if (b.getClickingTogglesState()) {
         // LED

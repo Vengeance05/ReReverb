@@ -65,8 +65,9 @@ public:
                     for (int i = pos; i < pos + chunk; ++i) {
                         if (m != target) m = target > m ? std::min(target, m + fadeStep_) : std::max(target, m - fadeStep_);
                         const float yl = fl.process(left[i]), yr = fr.process(right[i]);
-                        left[i] += m * (yl - left[i]);
-                        right[i] += m * (yr - right[i]);
+                        const float w = sCurve(m);
+                        left[i] += w * (yl - left[i]);
+                        right[i] += w * (yr - right[i]);
                     }
                     mix_[b] = m;
                 }

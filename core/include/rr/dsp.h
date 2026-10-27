@@ -77,6 +77,28 @@ private:
     float target_ = 0.0f;
 };
 
+// Smoothstep: maps a linear 0..1 fade onto an S-curve with zero slope at both
+// ends, so crossfades start and stop without a corner (no high-frequency tick).
+inline float sCurve(float m) noexcept { return m * m * (3.0f - 2.0f * m); }
+
+// 0..1 switch weight: a linear ramp of fixed duration shaped by sCurve().
+// Interface matches Smoother (prepare/setTarget/snap/next/target).
+class Fader {
+public:
+    void prepare(double sampleRate, double timeMs) noexcept {
+        step_ = static_cast<float>(1.0 / std::max(1.0, sampleRate * timeMs * 0.001));
+    }
+    void setTarget(float t) noexcept { target_ = t; }
+    void snap(float v) noexcept { target_ = ramp_ = v; }
+    float next() noexcept {
+        if (ramp_ != target_) ramp_ = target_ > ramp_ ? std::min(target_, ramp_ + step_) : std::max(target_, ramp_ - step_);
+        return sCurve(ramp_);
+    }
+    float target() const noexcept { return target_; }
+private:
+    float step_ = 0.001f, ramp_ = 0.0f, target_ = 0.0f;
+};
+
 // ---------------------------------------------------------------------------
 // Biquad (transposed direct form II) with RBJ cookbook designs.
 struct BiquadCoeffs {
@@ -229,8 +251,10 @@ public:
             cur_ = Set{}; cur_.slope = slopeDb; build(cur_, logF);
             oldMix_ = 0.0f;
         } else if (slopeDb != cur_.slope) {
-            old_ = cur_; oldMix_ = 1.0f;                            // topology change: fade old -> new
-            cur_ = Set{}; cur_.slope = slopeDb; build(cur_, curLogF_);
+            if (oldMix_ > 0.0f) pendingSlope_ = slopeDb;            // finish the running fade first
+            else startSlopeFade(slopeDb);
+        } else {
+            pendingSlope_ = 0;
         }
     }
     float process(float x) noexcept {
@@ -244,11 +268,12 @@ public:
         }
         float y = cur_.run(x);
         if (oldMix_ > 0.0f) {
-            y += oldMix_ * (old_.run(x) - y);
+            y += sCurve(oldMix_) * (old_.run(x) - y);
             oldMix_ = std::max(0.0f, oldMix_ - fadeStep_);
+            if (oldMix_ <= 0.0f && pendingSlope_ != 0 && pendingSlope_ != cur_.slope) startSlopeFade(pendingSlope_);
         }
         if (mix_ != target_) mix_ = target_ > mix_ ? std::min(target_, mix_ + fadeStep_) : std::max(target_, mix_ - fadeStep_);
-        return x + mix_ * (y - x);
+        return x + sCurve(mix_) * (y - x);
     }
     void reset() noexcept {
         for (auto& st : cur_.s) st.reset();
@@ -257,6 +282,12 @@ public:
     }
     bool bypassed() const noexcept { return mix_ <= 0.0f && target_ <= 0.0f; }
 private:
+    void startSlopeFade(int slopeDb) noexcept {
+        old_ = cur_; oldMix_ = 1.0f;                                // topology change: fade old -> new
+        cur_ = Set{}; cur_.slope = slopeDb; build(cur_, curLogF_);
+        pendingSlope_ = 0;
+    }
+    int pendingSlope_ = 0;
     struct Set {
         std::array<Biquad, 4> s{};
         int stages = 0, slope = 0;

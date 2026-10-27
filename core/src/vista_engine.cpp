@@ -26,7 +26,8 @@ void VistaEngine::prepare(double sampleRate, int maxBlockSize) {
     late_.prepare(fs_, maxBlock_);
     eq_.prepare(fs_);
     dynamics_.prepare(fs_);
-    for (auto* s : {&erGain_, &lateGain_, &dryGain_, &wetGain_, &outGain_, &duckRevW_, &duckWetW_, &compW_}) s->prepare(fs_, 20.0);
+    for (auto* s : {&erGain_, &lateGain_, &dryGain_, &wetGain_, &outGain_}) s->prepare(fs_, 20.0);
+    for (auto* s : {&duckRevW_, &duckWetW_, &compW_}) s->prepare(fs_, 30.0);
     setSettings(settings_);
     for (auto* s : {&duckRevW_, &duckWetW_, &compW_}) s->snap(s->target());
     erGain_.snap(erGain_.target());

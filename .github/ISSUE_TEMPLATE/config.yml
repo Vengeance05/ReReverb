@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Setting up Septima's impulse responses
+    url: https://github.com/Vengeance05/ReReverb/blob/main/docs/INSTALL.md#septimas-impulse-responses-required
+    about: Septima says "No IRs found"? The install guide walks through it.

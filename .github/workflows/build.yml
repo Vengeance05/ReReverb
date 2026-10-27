@@ -1,8 +1,13 @@
 name: Build
 
-# Every push and pull request builds both platforms and runs the DSP tests.
-# Pushing a tag like v1.0.0 also publishes a GitHub Release with the
-# macOS installer (.pkg) and the Windows installer (.exe) + zip attached.
+# Every push and pull request builds both platforms and runs:
+#   - the DSP unit tests,
+#   - the session-compatibility checks (parameter IDs, golden renders),
+#   - pluginval (strictness 10) on the VST3s, and auval on the Mac AUs.
+# Pushing a tag like v1.0.1 also publishes a GitHub Release with the
+# macOS installer (.pkg) and the Windows installer (.exe) + zips attached.
+# Test builds (non-tag) skip link-time optimisation and build the Mac plugins
+# for Apple Silicon only, so they finish much faster; releases are universal.
 
 on:
   push:
@@ -13,6 +18,7 @@ on:
 
 env:
   JUCE_VERSION: 8.0.4
+  PLUGINVAL_VERSION: v1.0.4
 
 # A newer push to the same branch or tag cancels the older, still-running build.
 concurrency:
@@ -36,8 +42,33 @@ jobs:
           [ -f dependencies/JUCE/CMakeLists.txt ] || \
             git clone --depth 1 --branch "$JUCE_VERSION" https://github.com/juce-framework/JUCE.git dependencies/JUCE
 
-      - name: Build, test and package (universal)
-        run: ./make_installer.sh
+      - name: Parameter compatibility
+        run: python3 tools/check_params.py
+
+      - name: Build, test and package
+        run: |
+          if [[ "$GITHUB_REF" != refs/tags/v* ]]; then export ARCHS=arm64 RR_LTO=OFF; fi
+          ./make_installer.sh
+
+      - name: Golden renders (old sessions must sound the same)
+        run: |
+          ./build-release/VistaRooms_Golden check tests/golden/vista_rooms.txt
+          ./build-release/rr_golden_core check tests/golden/septima_core.txt
+
+      - name: pluginval and auval
+        run: |
+          curl -sSL -o pv.zip "https://github.com/Tracktion/pluginval/releases/download/$PLUGINVAL_VERSION/pluginval_macOS.zip"
+          unzip -q pv.zip
+          PV=pluginval.app/Contents/MacOS/pluginval
+          for P in Septima "Vista Rooms"; do
+            T=$( [ "$P" = "Septima" ] && echo Septima || echo VistaRooms )
+            $PV --strictness-level 10 --validate-in-process --timeout-ms 600000 --validate "build-release/${T}_artefacts/Release/VST3/$P.vst3"
+          done
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          cp -R build-release/*_artefacts/Release/AU/*.component ~/Library/Audio/Plug-Ins/Components/
+          killall -9 AudioComponentRegistrar 2>/dev/null || true
+          auval -v aufx Sptm Rrvb
+          auval -v aufx Vsta Rrvb
 
       - name: Zip plugins
         run: |
@@ -72,15 +103,32 @@ jobs:
 
       - name: Configure
         # No -G: use whichever Visual Studio the runner image has installed.
+        shell: pwsh
         run: |
           cmake --version
-          cmake -S . -B build -A x64 -DRR_COPY_AFTER_BUILD=OFF
+          $lto = if ("$env:GITHUB_REF" -like "refs/tags/v*") { "ON" } else { "OFF" }
+          cmake -S . -B build -A x64 -DRR_COPY_AFTER_BUILD=OFF -DRR_LTO="$lto"
 
       - name: Build
         run: cmake --build build --config Release --parallel
 
       - name: Test
-        run: build\Release\rr_tests.exe
+        run: |
+          build\Release\rr_tests.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          build\Release\VistaRooms_Golden.exe check tests\golden\vista_rooms.txt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          build\Release\rr_golden_core.exe check tests\golden\septima_core.txt
+
+      - name: pluginval
+        shell: pwsh
+        run: |
+          Invoke-WebRequest "https://github.com/Tracktion/pluginval/releases/download/$env:PLUGINVAL_VERSION/pluginval_Windows.zip" -OutFile pv.zip
+          Expand-Archive pv.zip -DestinationPath pv
+          foreach ($p in @("build\Septima_artefacts\Release\VST3\Septima.vst3", "build\VistaRooms_artefacts\Release\VST3\Vista Rooms.vst3")) {
+            & pv\pluginval.exe --strictness-level 10 --validate-in-process --timeout-ms 600000 --validate $p
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
       - name: Installer and zip
         shell: pwsh
