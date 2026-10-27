@@ -54,12 +54,12 @@ Requirements: Xcode command-line tools and CMake (`brew install cmake`).
 IRs, for your own machine only. **Never distribute that package.**
 
 ### Windows
-Requirements: Visual Studio 2022 (with the *Desktop development with C++*
+Requirements: Visual Studio 2022 or later (with the *Desktop development with C++*
 workload), CMake and Git.
 
 ```bat
 git clone --depth 1 --branch 8.0.4 https://github.com/juce-framework/JUCE.git dependencies\JUCE
-cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DRR_COPY_AFTER_BUILD=OFF
+cmake -S . -B build -A x64 -DRR_COPY_AFTER_BUILD=OFF
 cmake --build build --config Release
 build\Release\rr_tests.exe
 ```
