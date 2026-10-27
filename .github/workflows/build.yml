@@ -1,0 +1,112 @@
+name: Build
+
+# Every push and pull request builds both platforms and runs the DSP tests.
+# Pushing a tag like v1.0.0 also publishes a GitHub Release with the
+# macOS installer (.pkg) and the Windows installer (.exe) + zip attached.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  JUCE_VERSION: 8.0.4
+
+jobs:
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache JUCE
+        uses: actions/cache@v4
+        with:
+          path: dependencies/JUCE
+          key: juce-${{ env.JUCE_VERSION }}
+
+      - name: Fetch JUCE
+        run: |
+          [ -f dependencies/JUCE/CMakeLists.txt ] || \
+            git clone --depth 1 --branch "$JUCE_VERSION" https://github.com/juce-framework/JUCE.git dependencies/JUCE
+
+      - name: Build, test and package (universal)
+        run: ./make_installer.sh
+
+      - name: Zip plugins
+        run: |
+          V=$(sed -n 's/^project(Rereverb VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
+          mkdir -p zip/VST3 zip/Components
+          cp -R build-release/Septima_artefacts/Release/VST3/Septima.vst3 "build-release/VistaRooms_artefacts/Release/VST3/Vista Rooms.vst3" zip/VST3/
+          cp -R build-release/Septima_artefacts/Release/AU/Septima.component "build-release/VistaRooms_artefacts/Release/AU/Vista Rooms.component" zip/Components/
+          cp README.md docs/INSTALL.md zip/
+          (cd zip && ditto -c -k --sequesterRsrc --keepParent . "../dist/Rereverb-$V-macOS.zip")
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: dist/*
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache JUCE
+        uses: actions/cache@v4
+        with:
+          path: dependencies/JUCE
+          key: juce-${{ env.JUCE_VERSION }}
+
+      - name: Fetch JUCE
+        shell: bash
+        run: |
+          [ -f dependencies/JUCE/CMakeLists.txt ] || \
+            git clone --depth 1 --branch "$JUCE_VERSION" https://github.com/juce-framework/JUCE.git dependencies/JUCE
+
+      - name: Configure
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DRR_COPY_AFTER_BUILD=OFF
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: build\Release\rr_tests.exe
+
+      - name: Installer and zip
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path CMakeLists.txt -Pattern 'project\(Rereverb VERSION ([0-9.]+)').Matches[0].Groups[1].Value
+          New-Item -ItemType Directory -Force dist, zip\VST3 | Out-Null
+          Copy-Item -Recurse build\Septima_artefacts\Release\VST3\Septima.vst3 zip\VST3\
+          Copy-Item -Recurse "build\VistaRooms_artefacts\Release\VST3\Vista Rooms.vst3" zip\VST3\
+          Copy-Item README.md, docs\INSTALL.md zip\
+          Compress-Archive -Path zip\* -DestinationPath "dist\Rereverb-$v-Windows.zip"
+          choco install innosetup --no-progress -y
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=$v" installer\windows\rereverb.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/*
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [macos, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES=$(awk -v t="${GITHUB_REF_NAME#v}" '$0 ~ "^## \\[?"t {f=1; next} /^## / && f {exit} f' CHANGELOG.md)
+          printf '%s\n\n%s\n' "$NOTES" "See docs/INSTALL.md for installation, including the one-time security approval on macOS and Windows." > notes.md
+          gh release create "$GITHUB_REF_NAME" out/macos/* out/windows/* --title "Rereverb $GITHUB_REF_NAME" --notes-file notes.md

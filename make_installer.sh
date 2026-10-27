@@ -15,7 +15,7 @@
 # not allow redistributing its impulse responses.
 set -e
 cd "$(dirname "$0")"
-VERSION=1.0.0
+VERSION=$(sed -n 's/^project(Rereverb VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
 IR_SRC=""
 if [ "$1" = "--with-irs" ]; then
   IR_SRC="$2"

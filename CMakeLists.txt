@@ -11,6 +11,10 @@ if (APPLE)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "")
 endif()
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+if (MSVC)
+    add_compile_options(/utf-8 /MP)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
 
 # ---------------------------------------------------------------------------
 # Framework-independent DSP core shared by both plugins.

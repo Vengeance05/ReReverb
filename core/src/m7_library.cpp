@@ -23,8 +23,19 @@ std::string trimSeparators(std::string s) {
     return s.substr(i);
 }
 
+// Paths travel as UTF-8 std::strings. Convert explicitly so non-ASCII folder
+// names work on Windows, where path(std::string) uses the ANSI code page.
+std::filesystem::path fromUtf8(const std::string& s) {
+    return std::filesystem::path(std::u8string(reinterpret_cast<const char8_t*>(s.data()), s.size()));
+}
+
+std::string toUtf8(const std::filesystem::path& p) {
+    const auto u = p.u8string();
+    return std::string(reinterpret_cast<const char*>(u.data()), u.size());
+}
+
 bool isAudioFile(const std::filesystem::path& p) {
-    const auto ext = lower(p.extension().string());
+    const auto ext = lower(toUtf8(p.extension()));
     return ext == ".wav" || ext == ".aif" || ext == ".aiff";
 }
 
@@ -105,11 +116,11 @@ std::vector<IrProgram> groupIrFiles(const std::vector<std::string>& paths) {
     std::map<std::string, std::vector<FileEntry>> groups;
     std::map<std::string, std::pair<std::string, std::string>> groupInfo; // key -> (parent, base)
     for (const auto& p : paths) {
-        const std::filesystem::path fp(p);
+        const std::filesystem::path fp = fromUtf8(p);
         if (!isAudioFile(fp)) continue;
-        auto parsed = parseIrFileStem(fp.stem().string());
-        const std::string parent = fp.parent_path().filename().string();
-        const std::string key = lower(fp.parent_path().string() + "/" + parsed.base);
+        auto parsed = parseIrFileStem(toUtf8(fp.stem()));
+        const std::string parent = toUtf8(fp.parent_path().filename());
+        const std::string key = lower(toUtf8(std::filesystem::path(fp.parent_path().generic_u8string())) + "/" + parsed.base);
         groups[key].push_back({p, parsed});
         groupInfo[key] = {parent, parsed.base};
     }
@@ -191,13 +202,13 @@ std::vector<IrProgram> groupIrFiles(const std::vector<std::string>& paths) {
 std::vector<IrProgram> scanIrLibrary(const std::string& root) {
     std::vector<std::string> paths;
     std::error_code ec;
-    const std::filesystem::path rootPath(root);
+    const std::filesystem::path rootPath = fromUtf8(root);
     if (!std::filesystem::is_directory(rootPath, ec)) return {};
     for (auto it = std::filesystem::recursive_directory_iterator(
              rootPath, std::filesystem::directory_options::skip_permission_denied, ec);
          it != std::filesystem::recursive_directory_iterator(); it.increment(ec)) {
         if (ec) break;
-        if (it->is_regular_file(ec) && isAudioFile(it->path())) paths.push_back(it->path().string());
+        if (it->is_regular_file(ec) && isAudioFile(it->path())) paths.push_back(toUtf8(it->path()));
         if (paths.size() > 5000) break;
     }
     return groupIrFiles(paths);

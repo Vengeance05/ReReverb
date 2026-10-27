@@ -25,3 +25,4 @@ Claude outputs/
 
 # Local-only preset conversion tools (depend on data that can't be shared)
 tools/preset_gen/
+zip/

@@ -1,88 +1,101 @@
 # Rereverb: Septima + Vista Rooms
 
-Two free reverb plugins for macOS (AU + VST3), built with JUCE from original DSP.
+Two free reverb plugins for **macOS (AU, VST3)** and **Windows (VST3)**:
 
-- **Septima**: a convolution reverb built around a library of hardware-reverb
-  impulse responses. It adds Decay time (lengthen or shorten), bass and high
-  decay multipliers, 32 synthetic early-reflection sets, VLF level,
-  Early/Late balance, pre-delay, delay feed, early/late roll-offs, tail
-  modulation and a 4-band master EQ. It ships **without** impulse responses:
-  you download the free IR library yourself (see below).
-- **Vista Rooms**: an algorithmic room and hall reverb.
-  - Reflections: Proximity, Reflectivity, Size, Pattern, Diffusion,
-    roll-off, modulation/chorus and crossfeed.
-  - Reverb: Time 0.2–45 s plus Infinite, Contour, Low Boost, Pre-delay,
-    Bloom, Undulation, Size, roll-off, chorus modes, crossfeed and Echo.
-  - A 5-band EQ, ducking/compression and a tail gate.
-  - 471 factory presets (Halls, Chambers, Rooms, Studios, Ambiences,
-    Spaces, Post, Nonlinear, Mix Tools), plus Init.
+- **Septima:** a true-stereo convolution reverb built around a classic
+  hardware-reverb IR library. It can reshape the decay, swap early
+  reflections, and adds modulation and EQ. It needs the free IR library,
+  which you download separately (below).
+- **Vista Rooms:** an algorithmic reverb for realistic rooms and halls, with
+  separate Reflections and Reverb sections, EQ, ducking and a gate. It comes
+  with 471 factory presets.
 
-## Septima: getting the impulse responses
+## Download and install
 
-Septima needs Samplicity's free Bricasti M7 impulse response library. Its
-licence does not allow anyone to redistribute it, so it isn't in this
-repository or in the installer.
+1. Download the latest installer from the **[Releases](../../releases/latest)**
+   page: the `.pkg` for macOS or the `-Windows-Setup.exe` for Windows.
+2. Install it. The plugins aren't code-signed, so you'll approve them once:
+   - macOS: **System Settings → Privacy & Security → Open Anyway**.
+   - Windows: **More info → Run anyway**.
+3. **For Septima**, download the free IR library from
+   <https://samplicity.com/downloads/>
+   (*Samplicity – Bricasti IRs version 2023-10.zip*) and unzip it. In
+   Septima, click **IR Library…** and choose the unzipped folder.
 
-1. Download **"Samplicity – Bricasti IRs version 2023-10.zip"** (about 960 MB)
-   from Samplicity's downloads page: <https://samplicity.com/downloads/>
-2. Unzip it anywhere, for example in `~/Downloads`.
-3. Point Septima at it in either of these ways:
-   - **IR Library… button** (easiest): open Septima, click **IR Library…**
-     and choose the unzipped folder. You can choose the top-level
-     `Samplicity - Bricasti IRs version 2023-10` folder or any of its
-     sub-folders. Septima scans sub-folders, removes the duplicate copies
-     (44.1/48 kHz, quad versus left/right files) and keeps one 48 kHz version
-     of each of the 134 programs. The folder is remembered for every
-     instance and every DAW.
-   - **Default folder**: copy the WAVs from the
-     `…quad channel files, 48 Khz` sub-folder into
-     `~/Library/Application Support/Rereverb/Septima/IRs/` (just for you) or
-     `/Library/Application Support/Rereverb/Septima/IRs/` (all users).
-     Septima looks there automatically when no folder has been chosen.
+The full step-by-step guide is in **[docs/INSTALL.md](docs/INSTALL.md)**.
 
-Septima's 134 factory presets correspond one-to-one with the library's
-programs. Each opens its program at the settings it was captured at. Any
-other folder of WAV/AIFF impulse responses also works: quad true-stereo,
-L/R pairs, stereo and mono-to-stereo files are all recognised.
+## Manuals
 
-## Build
+- [Septima](docs/SEPTIMA.md)
+- [Vista Rooms](docs/VISTA_ROOMS.md)
+- [Changelog](CHANGELOG.md)
+
+## Why the IRs aren't included
+
+Septima's impulse responses come from Samplicity's free library. Its licence
+doesn't allow redistribution, so they aren't in this repository or in the
+installers. You can point Septima at your own copy anywhere on disk. Any
+other folder of WAV/AIFF impulse responses works too: quad true-stereo, L/R
+pairs, stereo and mono-to-stereo files are all recognised.
+
+---
+
+## Building from source
+
+### macOS
+Requirements: Xcode command-line tools and CMake (`brew install cmake`).
 
 ```sh
-./build.sh
+./build.sh              # builds, runs the tests, installs into ~/Library/Audio/Plug-Ins
+./make_installer.sh     # universal release build -> dist/Rereverb-<version>.pkg
 ```
 
-You need the Xcode command-line tools and CMake (`brew install cmake`). JUCE
-8.0.4 is fetched into `dependencies/JUCE` the first time you build. The
-plugins are installed to `~/Library/Audio/Plug-Ins/{VST3,Components}`; then
-rescan in your DAW (in Logic, restart it).
+`./make_installer.sh --with-irs <IR folder>` also installs your downloaded
+IRs, for your own machine only. **Never distribute that package.**
 
-## Installer package
+### Windows
+Requirements: Visual Studio 2022 (with the *Desktop development with C++*
+workload), CMake and Git.
 
-```sh
-./make_installer.sh
+```bat
+git clone --depth 1 --branch 8.0.4 https://github.com/juce-framework/JUCE.git dependencies\JUCE
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DRR_COPY_AFTER_BUILD=OFF
+cmake --build build --config Release
+build\Release\rr_tests.exe
 ```
 
-This builds universal (arm64 + x86_64) release plugins and creates
-`dist/Rereverb-1.0.0.pkg`, which installs both plugins system-wide. It
-contains no impulse responses.
+The VST3s are built to `build\Septima_artefacts\Release\VST3\` and
+`build\VistaRooms_artefacts\Release\VST3\`. To build the installer, install
+[Inno Setup 6](https://jrsoftware.org/isinfo.php) and run
+`iscc installer\windows\rereverb.iss`.
 
-For your own machine only, `./make_installer.sh --with-irs <IR folder>` also
-installs your downloaded IRs into the default folder above. That produces
-`dist/Rereverb-1.0.0-personal.pkg`. **Never distribute that package.**
+### Continuous integration and releases
+GitHub Actions (`.github/workflows/build.yml`) builds and tests both
+platforms on every push and pull request. To publish a release:
 
-## Repository layout
+1. Set the version in `CMakeLists.txt` (`project(Rereverb VERSION x.y.z)`).
+2. Add a `## [x.y.z]` section to `CHANGELOG.md`.
+3. Commit, tag and push:
+   ```sh
+   git tag vx.y.z && git push origin main vx.y.z
+   ```
 
-- `core/`: DSP that doesn't depend on JUCE. The tests are in
-  `tests/rr_tests.cpp` and build to `rr_tests`.
+The workflow builds everything and creates the GitHub Release with the
+macOS `.pkg` and `.zip` and the Windows `Setup.exe` and `.zip` attached.
+
+### Repository layout
+- `core/`: DSP that doesn't depend on JUCE (reverb engines, IR reshaping, IR
+  library scanning). Tests are in `tests/rr_tests.cpp`.
 - `plugins/common`, `plugins/septima`, `plugins/vista_rooms`: the JUCE plugins.
+- `installer/windows`: the Inno Setup script.
 - `tools/plugin_render`, `tools/plugin_bench`, `tools/plugin_smoke`: an
-  offline render host, a CPU benchmark and a smoke test for the built plugins.
+  offline render host, a CPU benchmark and a smoke test for built plugins.
 - `legacy/`: an earlier prototype, kept for reference and not built.
 
-User presets are saved to `~/Library/Audio/Presets/Rereverb/<plugin>/`.
+## Credits and notices
 
-Fonts: Inter, under the SIL Open Font License (`plugins/common/fonts/Inter-LICENSE.txt`).
-
-Septima and Vista Rooms are independent projects. They aren't affiliated with
-or endorsed by Samplicity, Bricasti Design or any other reverb maker, and the
-product names above are used only to say which IR library to download.
+- Built with [JUCE](https://juce.com).
+- Fonts: Inter, under the SIL Open Font License (`plugins/common/fonts/Inter-LICENSE.txt`).
+- Septima and Vista Rooms are independent projects. They aren't affiliated
+  with or endorsed by Samplicity, Bricasti Design or any other reverb maker.
+  Product names are used only to say which IR library to download.
